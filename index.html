@@ -8,23 +8,54 @@
 :root { color-scheme: light; }
 * { box-sizing: border-box; }
 body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#f6f7f9; color:#1c1e21; }
-.wrap { max-width:760px; margin:0 auto; padding:28px 20px 60px; }
+.wrap { max-width:780px; margin:0 auto; padding:28px 20px 80px; }
 h1 { font-size:26px; margin:0 0 4px; letter-spacing:-0.02em; }
 .sub { color:#6b7280; font-size:14px; }
 .meta { color:#6b7280; font-size:13px; margin-top:6px; }
-.card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; gap:16px; }
-.date { flex:0 0 auto; width:66px; text-align:center; border-right:1px solid #eef0f2; padding-right:14px; }
+
+.bar { position:sticky; top:0; z-index:5; background:#f6f7f9ee; backdrop-filter:blur(6px);
+       display:flex; align-items:center; gap:10px; padding:12px 0; margin:18px 0 4px; border-bottom:1px solid #e9ebee; }
+button { font:inherit; font-size:13px; font-weight:600; padding:7px 13px; border-radius:8px; cursor:pointer;
+         border:1px solid #d6dae0; background:#fff; color:#1c1e21; }
+button:hover { background:#f2f4f7; }
+button:disabled { opacity:.5; cursor:default; }
+.status { margin-left:auto; font-size:12px; color:#9aa0a6; display:flex; align-items:center; gap:6px; }
+.dot { width:7px; height:7px; border-radius:50%; background:#c3c8ce; }
+.dot.ok { background:#16a34a; } .dot.sync { background:#d97706; } .dot.err { background:#dc2626; }
+
+.card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px 14px; margin-bottom:10px;
+        display:flex; align-items:flex-start; gap:14px; transition:opacity .15s; }
+.card.done { opacity:.5; }
+.card.done .act { text-decoration:line-through; }
+.date { flex:0 0 auto; width:62px; text-align:center; border-right:1px solid #eef0f2; padding:4px 12px 4px 0; }
 .dow { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#9aa0a6; }
 .dnum { font-size:22px; font-weight:700; line-height:1; margin:2px 0; }
 .mon { font-size:12px; color:#6b7280; }
-.act { font-size:16px; font-weight:500; }
-.act.empty { color:#b3b9c0; font-weight:400; font-style:italic; }
-.tag { display:inline-block; margin-left:8px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; vertical-align:middle; }
+.body { flex:1 1 auto; min-width:0; }
+.row { display:flex; align-items:center; gap:8px; }
+input.act { flex:1 1 auto; min-width:0; font:inherit; font-size:16px; font-weight:500; color:#1c1e21;
+            border:1px solid transparent; background:transparent; border-radius:6px; padding:5px 7px; }
+input.act::placeholder { color:#b3b9c0; font-weight:400; font-style:italic; }
+input.act:hover, textarea.notes:hover { background:#f7f8fa; }
+input.act:focus, textarea.notes:focus { outline:none; background:#fff; border-color:#9db6f0; box-shadow:0 0 0 3px #e8effc; }
+textarea.notes { width:100%; margin-top:5px; font:inherit; font-size:13px; color:#5b6169; resize:none; overflow:hidden;
+                 border:1px solid transparent; background:transparent; border-radius:6px; padding:5px 7px; min-height:30px; }
+textarea.notes::placeholder { color:#c3c8ce; }
+input.done { flex:0 0 auto; width:18px; height:18px; margin-top:8px; cursor:pointer; accent-color:#16a34a; }
+
+.tag { flex:0 0 auto; font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; }
 .t-travel { background:#eaf2ff; color:#2563eb; }
 .t-rest { background:#eafaf0; color:#16a34a; }
 .t-out { background:#fff4e5; color:#d97706; }
 .wk { margin:22px 0 8px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9aa0a6; }
-footer { margin-top:28px; color:#9aa0a6; font-size:12px; text-align:center; }
+footer { margin-top:28px; color:#9aa0a6; font-size:12px; text-align:center; line-height:1.6; }
+.banner { border-radius:9px; font-size:13px; padding:10px 13px; margin:14px 0 0; line-height:1.5; }
+.banner.warn { background:#fff8e6; border:1px solid #f5e2b8; color:#8a6d1f; }
+.banner.err { background:#fdecec; border:1px solid #f5c2c2; color:#a12626; }
+.toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px);
+         background:#1c1e21; color:#fff; font-size:13px; padding:10px 16px; border-radius:9px;
+         opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
@@ -34,14 +65,40 @@ footer { margin-top:28px; color:#9aa0a6; font-size:12px; text-align:center; }
     <div class="sub">A getaway in Valtellina · 29 Aug – 12 Sep 2026</div>
     <div class="meta">15 days · Sondrio, Lombardy, Italy</div>
   </header>
+
+  <div id="setup" class="banner warn" style="display:none">
+    <strong>Not connected yet.</strong> Paste your Apps Script Web app URL into
+    <code>ENDPOINT</code> in index.html to turn on shared editing.
+    Until then, edits stay on this device only.
+  </div>
+  <div id="errbox" class="banner err" style="display:none"></div>
+
+  <div class="bar">
+    <button id="refresh">↻ Refresh</button>
+    <button id="reset">Reset</button>
+    <span class="status"><span class="dot" id="dot"></span><span id="status">Loading…</span></span>
+  </div>
+
   <div class="wk">Late August</div>
   <div id="list-aug"></div>
   <div class="wk">September</div>
   <div id="list-sep"></div>
-  <footer>Made for Daniele</footer>
+
+  <footer>
+    Edits save to a shared Google Sheet — you and anyone with this link see the same plan.<br>
+    Changes from other people appear within about 10 seconds.
+  </footer>
 </div>
+<div class="toast" id="toast"></div>
+
 <script>
-const plan = [
+// ============================================================
+//  CONFIG — paste your Apps Script Web app URL here (ends /exec)
+// ============================================================
+const ENDPOINT = "PASTE_YOUR_WEB_APP_URL_HERE";
+// ============================================================
+
+const BASE = [
   ["2026-08-29","Rest + Friends + Board Games","rest"],
   ["2026-08-30","Lunch and Hiking","out"],
   ["2026-08-31","SPA","rest"],
@@ -58,17 +115,206 @@ const plan = [
   ["2026-09-11","",""],
   ["2026-09-12","Back to HK","travel"],
 ];
-const dow=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const tagLabel={travel:"Travel",rest:"Rest",out:"Outdoors"};
-function card([iso,act,kind]){
-  const d=new Date(iso+"T00:00:00");
-  const tag=kind?'<span class="tag t-'+kind+'">'+tagLabel[kind]+'</span>':'';
-  const actHtml=act?'<div class="act">'+act+tag+'</div>':'<div class="act empty">Open — nothing planned yet</div>';
-  return '<div class="card"><div class="date"><div class="dow">'+dow[d.getDay()]+'</div><div class="dnum">'+d.getDate()+'</div><div class="mon">'+mon[d.getMonth()]+'</div></div>'+actHtml+'</div>';
+const LOCAL_KEY = "valtellina-trip-v2";
+const dow = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const tagLabel = { travel:"Travel", rest:"Rest", out:"Outdoors" };
+
+const connected = ENDPOINT.indexOf("http") === 0;
+if (!connected) document.getElementById("setup").style.display = "block";
+
+function defaults(){ return BASE.map(r => ({ date:r[0], act:r[1], notes:"", done:false })); }
+let state = defaults();
+const els = [];              // {act, notes, done, card} per row
+let pendingPush = false;     // local edits not yet written
+let pushTimer = null;
+
+// ---- status -------------------------------------------------
+function setStatus(text, cls){
+  document.getElementById("status").textContent = text;
+  document.getElementById("dot").className = "dot" + (cls ? " " + cls : "");
 }
-document.getElementById("list-aug").innerHTML=plan.filter(p=>p[0].startsWith("2026-08")).map(card).join("");
-document.getElementById("list-sep").innerHTML=plan.filter(p=>p[0].startsWith("2026-09")).map(card).join("");
+function showError(msg){
+  const b = document.getElementById("errbox");
+  b.style.display = "block";
+  b.innerHTML = "<strong>Sync problem.</strong> " + msg +
+    " Your edits are still saved on this device.";
+}
+function clearError(){ document.getElementById("errbox").style.display = "none"; }
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+// ---- local backup (so nothing is lost if the sheet is down) --
+function saveLocal(){
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(state)); } catch(e){}
+}
+function loadLocal(){
+  try { const raw = localStorage.getItem(LOCAL_KEY); if (raw) return JSON.parse(raw); } catch(e){}
+  return null;
+}
+
+// ---- network ------------------------------------------------
+async function pull(){
+  if (!connected) return;
+  const res  = await fetch(ENDPOINT + "?t=" + Date.now(), { method:"GET" });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "unknown error");
+  return data.rows;
+}
+async function push(){
+  if (!connected) return;
+  setStatus("Saving…", "sync");
+  const res = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids CORS preflight
+    body: JSON.stringify({ rows: state })
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "unknown error");
+  pendingPush = false;
+  clearError();
+  setStatus("Saved", "ok");
+}
+function schedulePush(){
+  pendingPush = true;
+  saveLocal();
+  if (!connected) { setStatus("Saved on this device", "ok"); return; }
+  setStatus("Saving…", "sync");
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    push().catch(err => { setStatus("Not saved", "err"); showError(String(err.message || err)); });
+  }, 900);
+}
+
+// ---- apply remote data without stomping on what you're typing
+function applyRows(rows){
+  rows.forEach((r,i) => {
+    if (i >= state.length) return;
+    state[i].date = r.date || state[i].date;
+    const e = els[i];
+    if (!e) return;
+    if (document.activeElement !== e.act && state[i].act !== r.act) {
+      state[i].act = r.act; e.act.value = r.act;
+    }
+    if (document.activeElement !== e.notes && state[i].notes !== r.notes) {
+      state[i].notes = r.notes; e.notes.value = r.notes; autosize(e.notes);
+    }
+    if (state[i].done !== r.done) {
+      state[i].done = r.done; e.done.checked = r.done;
+      e.card.classList.toggle("done", r.done);
+    }
+  });
+  saveLocal();
+}
+
+// ---- render -------------------------------------------------
+function autosize(el){ el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
+
+function makeCard(i){
+  const [iso, , kind] = BASE[i];
+  const d = new Date(iso + "T00:00:00");
+  const st = state[i];
+
+  const card = document.createElement("div");
+  card.className = "card" + (st.done ? " done" : "");
+
+  const date = document.createElement("div");
+  date.className = "date";
+  date.innerHTML = '<div class="dow">' + dow[d.getDay()] + '</div>' +
+                   '<div class="dnum">' + d.getDate() + '</div>' +
+                   '<div class="mon">' + mon[d.getMonth()] + '</div>';
+
+  const body = document.createElement("div"); body.className = "body";
+  const row  = document.createElement("div"); row.className = "row";
+
+  const act = document.createElement("input");
+  act.className = "act"; act.type = "text";
+  act.value = st.act; act.placeholder = "Open — add an activity…";
+  act.addEventListener("input", () => { state[i].act = act.value; schedulePush(); });
+  row.appendChild(act);
+
+  if (kind) {
+    const tag = document.createElement("span");
+    tag.className = "tag t-" + kind; tag.textContent = tagLabel[kind];
+    row.appendChild(tag);
+  }
+
+  const notes = document.createElement("textarea");
+  notes.className = "notes"; notes.value = st.notes;
+  notes.placeholder = "Notes — bookings, times, addresses…";
+  notes.addEventListener("input", () => {
+    state[i].notes = notes.value; autosize(notes); schedulePush();
+  });
+
+  body.appendChild(row); body.appendChild(notes);
+
+  const done = document.createElement("input");
+  done.className = "done"; done.type = "checkbox"; done.checked = st.done;
+  done.title = "Mark as done";
+  done.addEventListener("change", () => {
+    state[i].done = done.checked;
+    card.classList.toggle("done", done.checked);
+    schedulePush();
+  });
+
+  card.appendChild(date); card.appendChild(body); card.appendChild(done);
+  els[i] = { act, notes, done, card };
+  setTimeout(() => autosize(notes), 0);
+  return card;
+}
+
+function render(){
+  const aug = document.getElementById("list-aug");
+  const sep = document.getElementById("list-sep");
+  aug.innerHTML = ""; sep.innerHTML = ""; els.length = 0;
+  BASE.forEach((r,i) => (r[0].startsWith("2026-08") ? aug : sep).appendChild(makeCard(i)));
+}
+
+// ---- boot ---------------------------------------------------
+const cached = loadLocal();
+if (cached && cached.length === BASE.length) state = cached;
+render();
+
+if (connected) {
+  setStatus("Loading…", "sync");
+  pull()
+    .then(rows => { applyRows(rows); clearError(); setStatus("Synced", "ok"); })
+    .catch(err => { setStatus("Offline", "err"); showError(String(err.message || err)); });
+
+  // poll for the other person's changes
+  setInterval(() => {
+    if (pendingPush) return;                    // don't clobber unsaved edits
+    if (document.hidden) return;                // skip in background tabs
+    pull()
+      .then(rows => { applyRows(rows); clearError(); setStatus("Synced", "ok"); })
+      .catch(() => setStatus("Offline", "err"));
+  }, 10000);
+} else {
+  setStatus("Local only", "");
+}
+
+// ---- buttons ------------------------------------------------
+document.getElementById("refresh").addEventListener("click", () => {
+  if (!connected) { toast("Not connected to the sheet yet"); return; }
+  setStatus("Loading…", "sync");
+  pull()
+    .then(rows => { applyRows(rows); clearError(); setStatus("Synced", "ok"); toast("Up to date"); })
+    .catch(err => { setStatus("Offline", "err"); showError(String(err.message || err)); });
+});
+
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("Reset the itinerary back to the original plan?\n\nThis clears the shared version for everyone.")) return;
+  state = defaults();
+  render();
+  saveLocal();
+  if (connected) {
+    push().then(() => toast("Reset for everyone"))
+          .catch(err => showError(String(err.message || err)));
+  } else { toast("Reset on this device"); }
+});
 </script>
 </body>
 </html>
